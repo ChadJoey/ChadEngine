@@ -1,0 +1,14 @@
+{
+  "dependencies": [
+    "raylib",
+    "imgui",
+    "entt",
+    "glm",
+    "nlohmann-json",
+    "stb",
+    "box2d",
+    "reactphysics3d",
+    "recastnavigation",
+    "behaviortree-cpp"
+  ]
+}

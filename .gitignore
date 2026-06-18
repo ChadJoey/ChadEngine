@@ -1,0 +1,16 @@
+# Build output
+build/
+out/
+
+# Visual Studio
+.vs/
+*.suo
+*.user
+
+# vcpkg installed packages (restored automatically)
+vcpkg_installed/
+
+# CMake cache
+CMakeCache.txt
+CMakeFiles/
+CMakeSettings.json
