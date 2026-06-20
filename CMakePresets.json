@@ -4,8 +4,19 @@
     {
       "name": "default",
       "generator": "Visual Studio 17 2022",
-      "toolchainFile": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake",
       "binaryDir": "${sourceDir}/build"
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "default",
+      "configuration": "Debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "default",
+      "configuration": "Release"
     }
   ]
 }
