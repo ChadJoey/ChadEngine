@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(MyEngine)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Game)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Editor)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -41,8 +41,10 @@ add_library(imgui STATIC
     ${imgui_SOURCE_DIR}/imgui_tables.cpp
     ${imgui_SOURCE_DIR}/imgui_widgets.cpp
     ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    ${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp
+
 )
-target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR})
+target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/misc/cpp)
 add_library(imgui::imgui ALIAS imgui)
 
 # ---- rlImGui (built manually to avoid its find_package calls) ----
@@ -165,13 +167,17 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(recastnavigation)
-
 # ---- EngineLib ----
-add_library(EngineLib STATIC
-    engine/src/core/ecs.cpp
-    engine/src/core/engine.cpp
+file(GLOB_RECURSE ENGINE_SOURCES
+    CONFIGURE_DEPENDS
+    "engine/src/*.cpp"
 )
+
+add_library(EngineLib STATIC ${ENGINE_SOURCES})
 target_include_directories(EngineLib PUBLIC engine/include)
+target_compile_definitions(EngineLib PUBLIC
+    GLM_ENABLE_EXPERIMENTAL
+)
 target_link_libraries(EngineLib PUBLIC
     rlimgui
     imreflect
@@ -187,8 +193,16 @@ target_link_libraries(EngineLib PUBLIC
     DetourCrowd
 )
 
+
+
+
 # ---- Game ----
-add_executable(Game game/src/main.cpp)
+file(GLOB_RECURSE GAME_SOURCES
+    CONFIGURE_DEPENDS
+    "game/src/*.cpp"
+)
+
+add_executable(Game ${GAME_SOURCES})
 target_link_libraries(Game PRIVATE EngineLib)
 
 # ---- Folder organization ----
@@ -197,3 +211,24 @@ set_target_properties(
     Recast Detour DetourCrowd
     PROPERTIES FOLDER "deps"
 )
+
+
+file(GLOB_RECURSE EDITOR_SOURCES
+    CONFIGURE_DEPENDS
+    "editor/*.cpp"
+)
+
+add_executable(Editor ${EDITOR_SOURCES})
+target_include_directories(Editor PRIVATE editor/include)
+target_link_libraries(Editor PRIVATE EngineLib)
+
+function(add_project PROJECT_NAME)
+    file(GLOB_RECURSE PROJECT_SOURCES
+        CONFIGURE_DEPENDS
+        "projects/${PROJECT_NAME}/*.cpp"
+    )
+    add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
+    target_link_libraries(${PROJECT_NAME} PRIVATE EngineLib)
+endfunction()
+
+add_project(EngineTest)

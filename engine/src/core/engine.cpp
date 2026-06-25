@@ -1,35 +1,43 @@
 #include "core/engine.hpp"
-#include "raylib.h"
+#include "core/device.hpp"
+#include "core/scene_manager.hpp"
+#include "core/ecs.hpp"
 #include <chrono>
 
 namespace ChadEngine {
 
     EngineClass Engine;
 
-    void EngineClass::Initialize() {
-        InitWindow(1280, 720, "MyEngine");
-        SetTargetFPS(60);
+    void EngineClass::Initialize(int width, int height, const char* title) {
+        m_device = new Device();
+        m_device->Init(width, height, title);
         m_ecs = new ECS();
+        m_scenemanager = new SceneManager();
+        m_state = EngineState::Playing;
     }
 
     void EngineClass::Shutdown() {
-        delete m_ecs;
-        CloseWindow();
+        delete m_ecs;   m_ecs = nullptr;
+        m_device->Shutdown();
+        delete m_device; m_device = nullptr;
     }
 
     void EngineClass::RunFrame(float dt) {
+        m_deltaTime = dt;
+        m_ecs->FlushDeleted();
         m_ecs->UpdateSystems(dt);
-
-        BeginDrawing();
-        ClearBackground(DARKBLUE);
-        DrawFPS(10, 10);           
+        m_device->BeginFrame();
         m_ecs->RenderSystems();
-        EndDrawing();
+        m_device->EndFrame();
     }
 
     void EngineClass::Run() {
-        while (!WindowShouldClose()) {
-            RunFrame(GetFrameTime());
+        auto time = std::chrono::high_resolution_clock::now();
+        while (!m_device->ShouldClose()) {
+            auto ctime = std::chrono::high_resolution_clock::now();
+            float dt = std::chrono::duration<float>(ctime - time).count();
+            RunFrame(dt);
+            time = ctime;
         }
     }
 
