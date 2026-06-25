@@ -93,6 +93,16 @@ namespace ChadEngine {
             for (auto& s : m_systems) s->Render();
         }
 
+        void RenderGameSystems() {
+            for (auto& s : m_systems)
+                if (!s->IsEditorSystem) s->Render();
+        }
+
+        void RenderEditorSystems() {
+            for (auto& s : m_systems)
+                if (s->IsEditorSystem) s->Render();
+        }
+
         std::vector<std::unique_ptr<System>> m_systems;
 
     private:

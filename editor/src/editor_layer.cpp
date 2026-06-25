@@ -2,7 +2,9 @@
 #include "imreflect_glm.hpp"
 #include "core/engine.hpp"
 #include "core/ecs.hpp"
+#include "core/device.hpp"
 #include "core/scene_manager.hpp"
+#include "core/component_registry.hpp"
 #include "core/transform.hpp"
 
 #include "rlImgui.h"
@@ -16,11 +18,13 @@ namespace ChadEngine {
 	
 	EditorLayer::EditorLayer() {
 		Title = "EditorLayer";
-		rlImGuiSetup(true);
+		IsEditorSystem = true;
 
+		Engine.GetDevice().EnableGameTexture(); // tell device to render game offscreen
+
+		rlImGuiSetup(true);
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-
 		io.IniFilename = "editor_layout.ini";
 
 	}
@@ -236,45 +240,53 @@ namespace ChadEngine {
 		ImGui::Separator();
 
 
-		for (auto& inspector : m_inpsectors)
-		{
-			if (!inspector.hasComponent(m_selectedEntity)) continue;
-			
+		for (auto& entry : Engine.GetComponentRegistry().GetAll()) {
+			if (!entry.hasComponent(m_selectedEntity)) continue;
 
-			bool open = ImGui::CollapsingHeader(inspector.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
+			bool open = ImGui::CollapsingHeader(
+				entry.name.c_str(), ImGuiTreeNodeFlags_DefaultOpen);
 
-			if (open)
-			{
-				ImGui::PushID(inspector.name.c_str());
+			if (open) {
+				ImGui::PushID(entry.name.c_str());
 				ImGui::Indent(8.f);
-				inspector.inspect(m_selectedEntity);
+				entry.inspect(m_selectedEntity);
 				ImGui::Unindent(8.f);
 				ImGui::PopID();
 			}
-
 		}
+
+
 		ImGui::End();
 	}
 
-
-	void EditorLayer::RenderViewPort()
-	{
+	void EditorLayer::RenderViewPort() {
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.f, 0.f));
 		ImGui::Begin("Viewport");
 		ImGui::PopStyleVar();
 
 		ImVec2 size = ImGui::GetContentRegionAvail();
-		ImGui::TextDisabled("Viewport %.0f x %.0f", size.x, size.y);
-		ImGui::TextDisabled("(RenderTexture wiring coming soon)");
+
+		const RenderTexture2D& tex = Engine.GetDevice().GetGameTexture();
+
+		// OpenGL textures are flipped on Y, Rectangle with negative height corrects this
+		Rectangle src = {
+			0.f,
+			0.f,
+			static_cast<float>(tex.texture.width),
+			-static_cast<float>(tex.texture.height)
+		};
+
+		rlImGuiImageRect(&tex.texture,
+			static_cast<int>(size.x),
+			static_cast<int>(size.y),
+			src);
 
 		ImGui::End();
 
-		// Stub console panel so the dock slot isn't empty
 		ImGui::Begin("Console");
 		ImGui::TextDisabled("Console output will go here");
 		ImGui::End();
 	}
-
 
 	void EditorLayer::DrawEntityNode(Entity entity)
 	{

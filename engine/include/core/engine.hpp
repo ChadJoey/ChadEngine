@@ -5,6 +5,7 @@ namespace ChadEngine {
     class Device;
     class ECS;
     class SceneManager;
+    class ComponentRegistry;
 
     enum class EngineState { Editor, Playing, Paused };
 
@@ -17,7 +18,9 @@ namespace ChadEngine {
 
         Device& GetDevice() const { return *m_device; }
         ECS& GetECS()    const { return *m_ecs; }
-        SceneManager& GetSceneManager() { return *m_scenemanager; }
+        SceneManager& GetSceneManager() { return *m_sceneManager; }
+        ComponentRegistry& GetComponentRegistry() { return *m_componentRegistry; }
+
 
         EngineState GetState()     const { return m_state; }
         void        SetState(EngineState s) { m_state = s; }
@@ -26,7 +29,8 @@ namespace ChadEngine {
     private:
         Device* m_device = nullptr;
         ECS* m_ecs = nullptr;
-        SceneManager* m_scenemanager;
+        SceneManager* m_sceneManager = nullptr;
+        ComponentRegistry* m_componentRegistry = nullptr;
         float   m_deltaTime = 0.f;
         EngineState m_state = EngineState::Editor;
     };

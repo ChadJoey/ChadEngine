@@ -1,6 +1,8 @@
 #include "core/engine.hpp"
 #include "core/device.hpp"
 #include "core/scene_manager.hpp"
+#include "core/component_registry.hpp"
+#include "core/device.hpp"
 #include "core/ecs.hpp"
 #include <chrono>
 
@@ -12,22 +14,30 @@ namespace ChadEngine {
         m_device = new Device();
         m_device->Init(width, height, title);
         m_ecs = new ECS();
-        m_scenemanager = new SceneManager();
+        m_sceneManager = new SceneManager();
+        m_componentRegistry = new ComponentRegistry();
+        m_componentRegistry->ProcessPending();
         m_state = EngineState::Playing;
     }
 
     void EngineClass::Shutdown() {
-        delete m_ecs;   m_ecs = nullptr;
+        delete m_componentRegistry; m_componentRegistry = nullptr;
+        delete m_sceneManager;      m_sceneManager = nullptr;
+        delete m_ecs;               m_ecs = nullptr;
         m_device->Shutdown();
-        delete m_device; m_device = nullptr;
+        delete m_device;            m_device = nullptr;
     }
 
     void EngineClass::RunFrame(float dt) {
         m_deltaTime = dt;
         m_ecs->FlushDeleted();
         m_ecs->UpdateSystems(dt);
+
         m_device->BeginFrame();
-        m_ecs->RenderSystems();
+        m_device->BeginGameRender();
+        m_ecs->RenderGameSystems();  
+        m_device->EndGameRender();
+        m_ecs->RenderEditorSystems(); 
         m_device->EndFrame();
     }
 

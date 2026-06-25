@@ -4,6 +4,7 @@
 #include "core/scene_manager.hpp"
 #include "include/editor_layer.hpp"
 #include "include/imreflect_glm.hpp"
+#include "include/defaultSceneRender.hpp"
 #include "ImReflect.hpp"
 
 #include <glm/gtx/euler_angles.hpp>
@@ -22,6 +23,7 @@ IMGUI_REFLECT(TransformView, position, rotation, scale)
 int main() {
     Engine.Initialize(1280, 720, "ChadEngine Editor");
 
+    Engine.GetECS().CreateSystem<DefaultSceneRenderer>();
     auto& editor = Engine.GetECS().CreateSystem<EditorLayer>();
 
     // Register Transform inspector

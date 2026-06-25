@@ -17,7 +17,7 @@ void Device::Shutdown() {
 
 void Device::BeginFrame() {
     BeginDrawing();
-    ClearBackground(RAYWHITE);
+    ClearBackground({ 30, 30, 30, 255 });
 }
 
 void Device::EndFrame() {
@@ -26,6 +26,23 @@ void Device::EndFrame() {
 
 bool Device::ShouldClose() const {
     return WindowShouldClose();
+}
+
+void Device::EnableGameTexture() {
+    m_useGameTexture = true;
+    m_gameTexture = LoadRenderTexture(m_width, m_height);
+}
+
+
+void Device::BeginGameRender() {
+    if (!m_useGameTexture) return;
+    BeginTextureMode(m_gameTexture);
+    ClearBackground({ 50, 50, 50, 255 });
+}
+
+void Device::EndGameRender() {
+    if (!m_useGameTexture) return;
+    EndTextureMode();
 }
 
 } // namespace engine

@@ -13,6 +13,7 @@ namespace ChadEngine {
 
         int Priority = 0;
         std::string Title;
+        bool IsEditorSystem = false;
     };
 
 } // namespace engine
