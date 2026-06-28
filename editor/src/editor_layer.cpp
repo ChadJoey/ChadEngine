@@ -3,8 +3,8 @@
 #include "core/engine.hpp"
 #include "core/ecs.hpp"
 #include "core/device.hpp"
-#include "core/scene_manager.hpp"
 #include "core/component_registry.hpp"
+#include "core/project_manager.hpp"
 #include "core/transform.hpp"
 
 #include "rlImgui.h"
@@ -44,11 +44,6 @@ namespace ChadEngine {
 		rlImGuiEnd();
 	}
 
-
-	void EditorLayer::RegisterComponentInspector(const std::string& name, std::function<bool(Entity)> hasComponent, std::function<void(Entity)> inspect)
-	{
-		m_inpsectors.push_back({ name, hasComponent, inspect });
-	}
 
 	void EditorLayer::SetupDockSpace()
 	{
@@ -104,80 +99,165 @@ namespace ChadEngine {
 
 		if (ImGui::BeginMenu("File"))
 		{
-			if (ImGui::MenuItem("New Scene"))
-			{
-				Engine.GetSceneManager().NewScene("untitled");
+			// these just set flags, never open popups directly from inside a menu
+			if (ImGui::MenuItem("New Project...")) {
+				m_newProjectPopup = true;
+				m_projectNameInput.clear();
+			}
+			if (ImGui::MenuItem("Open Project...")) {
+				m_openProjectPopup = true;
+				m_selectedProject = -1;
+				m_projectFilter.clear();
+			}
+
+			ImGui::Separator();
+
+			bool hasProject = Engine.GetProjectManager().HasProject();
+
+			if (ImGui::MenuItem("Save Project", "Ctrl+S", false, hasProject))
+				Engine.GetProjectManager().SaveProject();
+
+			if (ImGui::MenuItem("Close Project", nullptr, false, hasProject)) {
+				Engine.GetProjectManager().CloseProject();
 				m_selectedEntity = entt::null;
 			}
-			if (ImGui::MenuItem("Open Scene..."))
-			{
-				m_openScenePopup = true;
-				m_scenePathInput.clear();
-			}
-			ImGui::Separator();
-			if (ImGui::MenuItem("save scene", "Ctrl+S"))
-			{
-				Engine.GetSceneManager().SaveScene();
-			}
-			if (ImGui::MenuItem("Save Scene as..."))
-			{
-				m_openScenePopup = false;
-				Engine.GetSceneManager().SaveScene();
-			}
-			ImGui::Separator();
-			if (ImGui::MenuItem("Exit"))
-			{
 
-			}
+			ImGui::Separator();
+			if (ImGui::MenuItem("Exit")) {}
+
 			ImGui::EndMenu();
 		}
 
-
 		if (ImGui::BeginMenu("Entity"))
 		{
-			if (ImGui::MenuItem("Create Empty"))
-			{
+			if (ImGui::MenuItem("Create Empty")) {
 				auto e = Engine.GetECS().CreateEntity();
 				Engine.GetECS().CreateComponent<Transform>(e);
 				m_selectedEntity = e;
 			}
-			if (ImGui::MenuItem("Delete Selected", "Del"))
-			{
-				if (m_selectedEntity != entt::null)
-				{
+			if (ImGui::MenuItem("Delete Selected", "Del")) {
+				if (m_selectedEntity != entt::null) {
 					Engine.GetECS().DeleteEntity(m_selectedEntity);
 					m_selectedEntity = entt::null;
 				}
 			}
 			ImGui::EndMenu();
 		}
+
 		ImGui::EndMenuBar();
 
-		if (m_openScenePopup)
-		{
-			ImGui::OpenPopup("Open Scene");
-			m_openScenePopup = false;
-		}
+		// ---- all popups go here, AFTER EndMenuBar ----
 
-		if (ImGui::BeginPopupModal("Open Scene", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+		if (m_newProjectPopup) {
+			ImGui::OpenPopup("New Project");
+			m_newProjectPopup = false;
+		}
+		if (ImGui::BeginPopupModal("New Project", nullptr,
+			ImGuiWindowFlags_AlwaysAutoResize))
 		{
-			ImGui::Text("Scene path:");
-			ImGui::InputText("##Scenepath", &m_scenePathInput);
+			ImGui::Text("Project Name:");
+			ImGui::InputText("##projname", &m_projectNameInput);
+			ImGui::TextDisabled("Will be created in:");
+			ImGui::TextDisabled("%s/%s",
+				Engine.GetProjectManager().GetBasePath().c_str(),
+				m_projectNameInput.c_str());
 			ImGui::Spacing();
-			if (ImGui::Button("Open", ImVec2(120, 0)))
-			{
-				Engine.GetSceneManager().LoadScene(m_scenePathInput);
-				m_selectedEntity = entt::null;
+			if (ImGui::Button("Create", ImVec2(120, 0))) {
+				if (!m_projectNameInput.empty())
+					Engine.GetProjectManager().CreateProject(m_projectNameInput);
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SameLine();
-			if (ImGui::Button("Cancel", ImVec2(120,0)))
-			{
+			if (ImGui::Button("Cancel", ImVec2(120, 0)))
 				ImGui::CloseCurrentPopup();
-			}
 			ImGui::EndPopup();
 		}
 
+		if (m_openProjectPopup) {
+			ImGui::OpenPopup("Open Project");
+			m_openProjectPopup = false;
+		}
+		if (ImGui::BeginPopupModal("Open Project", nullptr,
+			ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Projects in: %s",
+				Engine.GetProjectManager().GetBasePath().c_str());
+			ImGui::Separator();
+
+			ImGui::SetNextItemWidth(400.f);
+			ImGui::InputText("Filter", &m_projectFilter);
+			ImGui::Spacing();
+
+			auto projects = Engine.GetProjectManager().ScanProjects();
+
+			ImGui::BeginChild("##projectlist", ImVec2(400.f, 300.f),
+				true, ImGuiWindowFlags_None);
+
+			if (projects.empty()) {
+				ImGui::TextDisabled("No projects found.");
+				ImGui::TextDisabled("Create one with File > New Project.");
+			}
+
+			for (int i = 0; i < static_cast<int>(projects.size()); i++) {
+				auto& proj = projects[i];
+
+				if (!m_projectFilter.empty()) {
+					auto nameLC = proj.name;
+					auto filterLC = m_projectFilter;
+					std::transform(nameLC.begin(), nameLC.end(),
+						nameLC.begin(), ::tolower);
+					std::transform(filterLC.begin(), filterLC.end(),
+						filterLC.begin(), ::tolower);
+					if (nameLC.find(filterLC) == std::string::npos) continue;
+				}
+
+				bool selected = (m_selectedProject == i);
+				ImGui::PushID(i);
+				if (ImGui::Selectable("##sel", selected,
+					ImGuiSelectableFlags_AllowDoubleClick, ImVec2(0.f, 40.f)))
+				{
+					m_selectedProject = i;
+					if (ImGui::IsMouseDoubleClicked(0)) {
+						Engine.GetProjectManager().LoadProject(proj.projFilePath);
+						m_selectedEntity = entt::null;
+						ImGui::CloseCurrentPopup();
+					}
+				}
+
+				ImVec2 pos = ImGui::GetItemRectMin();
+				ImGui::GetWindowDrawList()->AddText(
+					{ pos.x + 8.f, pos.y + 4.f },
+					IM_COL32(255, 255, 255, 255),
+					proj.name.c_str());
+				ImGui::GetWindowDrawList()->AddText(
+					{ pos.x + 8.f, pos.y + 22.f },
+					IM_COL32(160, 160, 160, 255),
+					proj.projFilePath.c_str());
+
+				ImGui::PopID();
+			}
+
+			ImGui::EndChild();
+			ImGui::Spacing();
+
+			bool canOpen = (m_selectedProject >= 0 &&
+				m_selectedProject < static_cast<int>(projects.size()));
+
+			if (!canOpen) ImGui::BeginDisabled();
+			if (ImGui::Button("Open", ImVec2(120.f, 0.f))) {
+				Engine.GetProjectManager().LoadProject(
+					projects[m_selectedProject].projFilePath);
+				m_selectedEntity = entt::null;
+				ImGui::CloseCurrentPopup();
+			}
+			if (!canOpen) ImGui::EndDisabled();
+
+			ImGui::SameLine();
+			if (ImGui::Button("Cancel", ImVec2(120.f, 0.f)))
+				ImGui::CloseCurrentPopup();
+
+			ImGui::EndPopup();
+		}
 	}
 
 
@@ -185,11 +265,6 @@ namespace ChadEngine {
 	{
 		ImGui::Begin("Hierarchy");
 
-		if (Engine.GetSceneManager().HasScene())
-		{
-			ImGui::TextDisabled("Scene: %s", Engine.GetSceneManager().GetCurrentSceneName().c_str());
-			ImGui::Separator();
-		}
 		auto view = Engine.GetECS().View<Transform>();
 		for (auto entity : view)
 		{

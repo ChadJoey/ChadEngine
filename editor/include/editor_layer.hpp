@@ -23,7 +23,6 @@ namespace ChadEngine {
 			std::function<void(Entity)> inspect;
 		};
 
-		void RegisterComponentInspector(const std::string& name, std::function<bool(Entity)> hasComponent, std::function<void(Entity)> inspect);
 
 		Entity GetSelectedEntity() const { return m_selectedEntity; }
 		void SetSelectedEntity(Entity e) { m_selectedEntity = e; }
@@ -41,10 +40,12 @@ namespace ChadEngine {
 		bool m_firstFrame = true;
 		Entity m_selectedEntity{ entt::null };
 
-		bool m_openScenePopup = false;
-		std::string m_scenePathInput;
+		bool        m_newProjectPopup = false;
+		bool        m_openProjectPopup = false;
+		std::string m_projectNameInput;
+		std::string m_projectFilter;
 
-		std::vector<ComponentInspector> m_inpsectors;
+		int         m_selectedProject = -1;
 	};
 
 

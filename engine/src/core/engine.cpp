@@ -1,7 +1,7 @@
 #include "core/engine.hpp"
 #include "core/device.hpp"
-#include "core/scene_manager.hpp"
 #include "core/component_registry.hpp"
+#include "core/project_manager.hpp"
 #include "core/device.hpp"
 #include "core/ecs.hpp"
 #include <chrono>
@@ -14,7 +14,8 @@ namespace ChadEngine {
         m_device = new Device();
         m_device->Init(width, height, title);
         m_ecs = new ECS();
-        m_sceneManager = new SceneManager();
+        m_projectManager = new ProjectManager();
+        m_projectManager->Init();
         m_componentRegistry = new ComponentRegistry();
         m_componentRegistry->ProcessPending();
         m_state = EngineState::Playing;
@@ -22,7 +23,7 @@ namespace ChadEngine {
 
     void EngineClass::Shutdown() {
         delete m_componentRegistry; m_componentRegistry = nullptr;
-        delete m_sceneManager;      m_sceneManager = nullptr;
+        delete m_projectManager;    m_projectManager = nullptr;
         delete m_ecs;               m_ecs = nullptr;
         m_device->Shutdown();
         delete m_device;            m_device = nullptr;

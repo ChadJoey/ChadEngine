@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 project(MyEngine)
 
+
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Editor)
 set(CMAKE_CXX_STANDARD 20)
@@ -218,17 +219,10 @@ file(GLOB_RECURSE EDITOR_SOURCES
     "editor/*.cpp"
 )
 
+
 add_executable(Editor ${EDITOR_SOURCES})
 target_include_directories(Editor PRIVATE editor/include)
 target_link_libraries(Editor PRIVATE EngineLib)
-
-function(add_project PROJECT_NAME)
-    file(GLOB_RECURSE PROJECT_SOURCES
-        CONFIGURE_DEPENDS
-        "projects/${PROJECT_NAME}/*.cpp"
-    )
-    add_executable(${PROJECT_NAME} ${PROJECT_SOURCES})
-    target_link_libraries(${PROJECT_NAME} PRIVATE EngineLib)
-endfunction()
-
-add_project(EngineTest)
+set_target_properties(Editor PROPERTIES
+    VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+)
